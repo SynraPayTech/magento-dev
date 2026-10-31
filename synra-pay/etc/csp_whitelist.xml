@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!--
+  Content Security Policy whitelist. Magento enforces CSP on checkout pages
+  (2.4.7+), so sdk.js, the card-fields frame and the SynraPay images must be
+  allowed explicitly for every environment's scripts host.
+-->
+<csp_whitelist xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Csp:etc/csp_whitelist.xsd">
+    <policies>
+        <policy id="script-src">
+            <values>
+                <value id="synrapay_js" type="host">js.synrapay.com</value>
+                <value id="synrapay_js_sandbox" type="host">sandbox.js.synrapay.com</value>
+                <value id="synrapay_js_dev" type="host">dev.js.synrapay.com</value>
+            </values>
+        </policy>
+        <policy id="frame-src">
+            <values>
+                <value id="synrapay_js" type="host">js.synrapay.com</value>
+                <value id="synrapay_js_sandbox" type="host">sandbox.js.synrapay.com</value>
+                <value id="synrapay_js_dev" type="host">dev.js.synrapay.com</value>
+                <value id="synrapay_any" type="host">*.synrapay.com</value>
+            </values>
+        </policy>
+        <policy id="child-src">
+            <values>
+                <value id="synrapay_any" type="host">*.synrapay.com</value>
+            </values>
+        </policy>
+        <policy id="connect-src">
+            <values>
+                <value id="synrapay_js" type="host">js.synrapay.com</value>
+                <value id="synrapay_js_sandbox" type="host">sandbox.js.synrapay.com</value>
+                <value id="synrapay_js_dev" type="host">dev.js.synrapay.com</value>
+                <value id="synrapay_any" type="host">*.synrapay.com</value>
+            </values>
+        </policy>
+        <policy id="style-src">
+            <values>
+                <value id="synrapay_any" type="host">*.synrapay.com</value>
+            </values>
+        </policy>
+        <policy id="img-src">
+            <values>
+                <value id="synrapay_any" type="host">*.synrapay.com</value>
+            </values>
+        </policy>
+        <policy id="font-src">
+            <values>
+                <value id="synrapay_any" type="host">*.synrapay.com</value>
+            </values>
+        </policy>
+    </policies>
+</csp_whitelist>

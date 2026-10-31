@@ -1,5 +1,8 @@
 /* SynraPay hosted session — mount styles (same classes as the WooCommerce plugin). */
-.synra-pay-label { display: flex; align-items: center; gap: 8px; width: 100%; }
+/* Radio, title and logo on one row (a block-level label would wrap under the radio). */
+.synra-pay-method .payment-method-title.choice { display: flex; align-items: center; gap: 8px; }
+.synra-pay-method .payment-method-title.choice input.radio { margin: 0; flex: none; }
+.synra-pay-label { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
 .synra-pay-label img.synra-pay-icon { height: 22px; width: auto; max-width: 110px; margin-left: auto; }
 .synra-pay-desc { margin: 0 0 8px; color: #6b7280; font-size: 13px; }
 .synra-pay-hs-mount { margin: 8px 0 12px; min-height: 48px; max-width: 520px; }

@@ -43,11 +43,6 @@
                     <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
                     <config_path>payment/synra_pay/api_signature_key</config_path>
                 </field>
-                <field id="connection_check" translate="label comment" type="label" sortOrder="44" showInDefault="1" showInWebsite="1" showInStore="0">
-                    <label>Connection check</label>
-                    <frontend_model>Synra\Pay\Block\Adminhtml\Form\Field\ConnectionCheck</frontend_model>
-                    <comment>Runs one signed call with the saved Merchant ID and API key each time this page loads. Save after changing the keys, then reload to re-check.</comment>
-                </field>
                 <field id="fallback_phone" translate="label comment" type="text" sortOrder="43" showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Fallback customer phone</label>
                     <comment>SynraPay requires a phone number on every order. When the customer gives none (or an invalid one), this number is sent instead so the card form still loads. Leave empty to require a valid customer phone.</comment>
