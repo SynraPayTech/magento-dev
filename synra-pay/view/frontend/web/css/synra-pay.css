@@ -1,0 +1,25 @@
+/* SynraPay hosted session — mount styles (same classes as the WooCommerce plugin). */
+.synra-pay-label { display: flex; align-items: center; gap: 8px; width: 100%; }
+.synra-pay-label img.synra-pay-icon { height: 22px; width: auto; max-width: 110px; margin-left: auto; }
+.synra-pay-desc { margin: 0 0 8px; color: #6b7280; font-size: 13px; }
+.synra-pay-hs-mount { margin: 8px 0 12px; min-height: 48px; max-width: 520px; }
+.synra-pay-hs-fields { width: 100%; min-width: 0; }
+.synra-pay-hs-fields iframe { max-width: 100%; }
+.synra-pay-hs-status { margin: 8px 0 0; font-size: 13px; line-height: 1.4; }
+.synra-pay-hs-status.is-muted { color: #6b7280; }
+.synra-pay-hs-status.is-error { color: #b91c1c; }
+
+/* Skeleton shown while the session opens and the card fields mount */
+.synra-pay-hs-skeleton { display: block; padding: 2px 0 4px; }
+.synra-pay-hs-sk {
+  display: block; border-radius: 6px;
+  background: linear-gradient(90deg, #e9ebef 25%, #f6f7f9 37%, #e9ebef 63%);
+  background-size: 400% 100%;
+  animation: synra-pay-hs-shimmer 1.4s ease infinite;
+}
+.synra-pay-hs-sk-label { width: 34%; height: 12px; margin: 8px 0 6px; }
+.synra-pay-hs-sk-field { width: 100%; height: 44px; margin-bottom: 4px; }
+.synra-pay-hs-sk-row { display: flex; gap: 12px; margin-top: 10px; }
+.synra-pay-hs-sk-half { flex: 1 1 0; height: 44px; }
+@keyframes synra-pay-hs-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .synra-pay-hs-sk { animation: none; } }

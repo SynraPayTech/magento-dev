@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="payment">
+            <group id="synra_pay" translate="label" type="text" sortOrder="5" showInDefault="1" showInWebsite="1" showInStore="0">
+                <label>SynraPay — Credit / Debit card (hosted session)</label>
+                <comment><![CDATA[SynraPay's own card fields appear inside your checkout page. The card is typed into SynraPay's frame and never touches this store. Every call to SynraPay is signed on the server with the Merchant ID and API key below.]]></comment>
+
+                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <config_path>payment/synra_pay/active</config_path>
+                </field>
+                <field id="title" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Title</label>
+                    <comment>Shown to customers at checkout.</comment>
+                    <config_path>payment/synra_pay/title</config_path>
+                </field>
+                <field id="description" translate="label" type="textarea" sortOrder="25" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Description</label>
+                    <config_path>payment/synra_pay/description</config_path>
+                </field>
+                <field id="mode" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Environment</label>
+                    <source_model>Synra\Pay\Model\Config\Source\Mode</source_model>
+                    <comment>Each environment has its own Merchant ID, API key and script host. Use Develop/Sandbox with test keys first, then switch to Live.</comment>
+                    <config_path>payment/synra_pay/mode</config_path>
+                </field>
+
+                <field id="creds_heading" translate="label comment" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Integration credentials</label>
+                    <comment><![CDATA[All of these come from the SynraPay Merchant Portal. Sign in, pick the store at the top, then open <strong>Developers</strong> in the left menu. Each environment (Develop / Sandbox / Live) has its own portal and its own keys — use the keys from the portal that matches the Environment chosen above.]]></comment>
+                    <frontend_model>Magento\Config\Block\System\Config\Form\Field\Heading</frontend_model>
+                </field>
+                <field id="merchant_id" translate="label comment" type="text" sortOrder="41" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Merchant ID (x-merchant-id)</label>
+                    <comment><![CDATA[Merchant Portal → Developers → <strong>API Keys</strong> → section 1 "Request Signing" → <strong>Merchant ID (x-merchant-id)</strong>.]]></comment>
+                    <config_path>payment/synra_pay/merchant_id</config_path>
+                </field>
+                <field id="api_signature_key" translate="label comment" type="obscure" sortOrder="42" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>API Key (signature key)</label>
+                    <comment><![CDATA[Merchant Portal → Developers → <strong>API Keys</strong> → section 1 "Request Signing" → <strong>API Signature Key (secret)</strong>. Signs every request to SynraPay; it lives on your server only and is never sent to the browser. If you click <em>Rotate signing key</em> in the portal, paste the new key here straight away.]]></comment>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <config_path>payment/synra_pay/api_signature_key</config_path>
+                </field>
+                <field id="fallback_phone" translate="label comment" type="text" sortOrder="43" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Fallback customer phone</label>
+                    <comment>SynraPay requires a phone number on every order. When the customer gives none (or an invalid one), this number is sent instead so the card form still loads. Leave empty to require a valid customer phone.</comment>
+                    <config_path>payment/synra_pay/fallback_phone</config_path>
+                </field>
+
+                <field id="webhook_heading" translate="label comment" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Webhook</label>
+                    <comment><![CDATA[SynraPay's signed webhook is the source of truth for every order. Register the URL below in the Merchant Portal → Developers → <strong>Webhooks</strong>.]]></comment>
+                    <frontend_model>Magento\Config\Block\System\Config\Form\Field\Heading</frontend_model>
+                </field>
+                <field id="webhook_url" translate="label comment" type="label" sortOrder="51" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Your Webhook URL</label>
+                    <frontend_model>Synra\Pay\Block\Adminhtml\Form\Field\WebhookUrl</frontend_model>
+                    <comment><![CDATA[Merchant Portal → Developers → <strong>Webhooks</strong> → <em>Update Webhook</em> → paste this as the <strong>Endpoint URL</strong>, with <strong>All events</strong> subscribed. The token in it is unique to this store.]]></comment>
+                </field>
+                <field id="key_sha512" translate="label comment" type="obscure" sortOrder="52" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Webhook signing secret</label>
+                    <comment><![CDATA[Merchant Portal → Developers → <strong>Webhooks</strong> → Configuration → <strong>Signing secret</strong>. Shown once when you click <em>Generate new secret</em>; copy it then and paste it here. A webhook that does not verify is refused with 401 and logged. Leave empty and every webhook is refused.]]></comment>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <config_path>payment/synra_pay/key_sha512</config_path>
+                </field>
+                <field id="x_api_key_name" translate="label comment" type="text" sortOrder="53" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Webhook API-Key header name</label>
+                    <comment><![CDATA[Merchant Portal → Developers → <strong>API Keys</strong> → section 2 "Webhook Verification" → <strong>API Key header name</strong>. Optional: leave both API-Key fields empty to verify webhooks by signature only.]]></comment>
+                    <config_path>payment/synra_pay/x_api_key_name</config_path>
+                </field>
+                <field id="x_api_key" translate="label comment" type="obscure" sortOrder="54" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Webhook API-Key value</label>
+                    <comment><![CDATA[Merchant Portal → Developers → <strong>API Keys</strong> → section 2 "Webhook Verification" → <strong>API Key value</strong>. Every webhook must carry this header with this value, in addition to the signature.]]></comment>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <config_path>payment/synra_pay/x_api_key</config_path>
+                </field>
+
+                <field id="origin_heading" translate="label" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Your checkout origin</label>
+                    <frontend_model>Magento\Config\Block\System\Config\Form\Field\Heading</frontend_model>
+                </field>
+                <field id="origin" translate="label comment" type="label" sortOrder="61" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Origin to register</label>
+                    <frontend_model>Synra\Pay\Block\Adminhtml\Form\Field\Origin</frontend_model>
+                    <comment>Hosted session binds each card session to this website. Register this origin as an allowed origin on your SynraPay merchant (Developers → Integrations), or the session is refused with ORIGIN_NOT_REGISTERED. Develop/Sandbox accept http://localhost only; Live needs https.</comment>
+                </field>
+
+                <field id="urls_heading" translate="label comment" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Gateway URLs</label>
+                    <comment>Defaults are correct for most merchants — only change if SynraPay gave you custom hosts.</comment>
+                    <frontend_model>Magento\Config\Block\System\Config\Form\Field\Heading</frontend_model>
+                </field>
+                <field id="live_base" translate="label" type="text" sortOrder="71" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Production base URL</label>
+                    <config_path>payment/synra_pay/live_base</config_path>
+                </field>
+                <field id="sandbox_base" translate="label" type="text" sortOrder="72" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Sandbox base URL</label>
+                    <config_path>payment/synra_pay/sandbox_base</config_path>
+                </field>
+                <field id="dev_base" translate="label" type="text" sortOrder="73" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Develop base URL</label>
+                    <config_path>payment/synra_pay/dev_base</config_path>
+                </field>
+
+                <field id="allowspecific" translate="label" type="allowspecific" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Payment from Applicable Countries</label>
+                    <source_model>Magento\Payment\Model\Config\Source\Allspecificcountries</source_model>
+                    <config_path>payment/synra_pay/allowspecific</config_path>
+                </field>
+                <field id="specificcountry" translate="label" type="multiselect" sortOrder="81" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Payment from Specific Countries</label>
+                    <source_model>Magento\Directory\Model\Config\Source\Country</source_model>
+                    <can_be_empty>1</can_be_empty>
+                    <config_path>payment/synra_pay/specificcountry</config_path>
+                </field>
+                <field id="sort_order" translate="label" type="text" sortOrder="82" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Sort Order</label>
+                    <frontend_class>validate-number</frontend_class>
+                    <config_path>payment/synra_pay/sort_order</config_path>
+                </field>
+                <field id="debug" translate="label comment" type="select" sortOrder="83" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Debug log</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Writes each session, confirm and webhook step to var/log/synra-pay.log. Never logs card data or keys.</comment>
+                    <config_path>payment/synra_pay/debug</config_path>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

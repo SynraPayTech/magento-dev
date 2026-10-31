@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- The payment method: Magento's gateway Adapter with an "initialize" command (links the
+         Magento order to the Direct API order the card fields were opened on, no charge yet)
+         and a "refund" command. -->
+    <virtualType name="SynraPayFacade" type="Magento\Payment\Model\Method\Adapter">
+        <arguments>
+            <argument name="code" xsi:type="const">Synra\Pay\Model\Config::CODE</argument>
+            <argument name="formBlockType" xsi:type="string">Magento\Payment\Block\Form</argument>
+            <argument name="infoBlockType" xsi:type="string">Synra\Pay\Block\Info</argument>
+            <argument name="valueHandlerPool" xsi:type="object">SynraPayValueHandlerPool</argument>
+            <argument name="validatorPool" xsi:type="object">SynraPayValidatorPool</argument>
+            <argument name="commandPool" xsi:type="object">SynraPayCommandPool</argument>
+        </arguments>
+    </virtualType>
+
+    <virtualType name="SynraPayGatewayConfig" type="Magento\Payment\Gateway\Config\Config">
+        <arguments>
+            <argument name="methodCode" xsi:type="const">Synra\Pay\Model\Config::CODE</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="SynraPayConfigValueHandler" type="Magento\Payment\Gateway\Config\ConfigValueHandler">
+        <arguments>
+            <argument name="configInterface" xsi:type="object">SynraPayGatewayConfig</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="SynraPayValueHandlerPool" type="Magento\Payment\Gateway\Config\ValueHandlerPool">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="default" xsi:type="string">SynraPayConfigValueHandler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <virtualType name="SynraPayCountryValidator" type="Magento\Payment\Gateway\Validator\CountryValidator">
+        <arguments>
+            <argument name="config" xsi:type="object">SynraPayGatewayConfig</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="SynraPayValidatorPool" type="Magento\Payment\Gateway\Validator\ValidatorPool">
+        <arguments>
+            <argument name="validators" xsi:type="array">
+                <item name="country" xsi:type="string">SynraPayCountryValidator</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <virtualType name="SynraPayCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="initialize" xsi:type="string">Synra\Pay\Gateway\Command\Initialize</item>
+                <item name="refund" xsi:type="string">Synra\Pay\Gateway\Command\Refund</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- var/log/synra-pay.log -->
+    <virtualType name="SynraPayLogHandler" type="Magento\Framework\Logger\Handler\Base">
+        <arguments>
+            <argument name="fileName" xsi:type="string">/var/log/synra-pay.log</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="SynraPayLogger" type="Magento\Framework\Logger\Monolog">
+        <arguments>
+            <argument name="name" xsi:type="string">synra-pay</argument>
+            <argument name="handlers" xsi:type="array">
+                <item name="system" xsi:type="object">SynraPayLogHandler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <type name="Synra\Pay\Model\Log">
+        <arguments>
+            <argument name="logger" xsi:type="object">SynraPayLogger</argument>
+        </arguments>
+    </type>
+
+    <!-- Secrets never leave the store: excluded from config dumps and masked in the admin. -->
+    <type name="Magento\Config\Model\Config\TypePool">
+        <arguments>
+            <argument name="sensitive" xsi:type="array">
+                <item name="payment/synra_pay/merchant_id" xsi:type="string">1</item>
+                <item name="payment/synra_pay/api_signature_key" xsi:type="string">1</item>
+                <item name="payment/synra_pay/key_sha512" xsi:type="string">1</item>
+                <item name="payment/synra_pay/x_api_key" xsi:type="string">1</item>
+                <item name="payment/synra_pay/webhook_token" xsi:type="string">1</item>
+            </argument>
+        </arguments>
+    </type>
+</config>
