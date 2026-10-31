@@ -56,35 +56,7 @@ class Client
         return $this->lastHttpCode;
     }
 
-    /**
-     * Settings-page connection check: one signed GET on a payment id that does
-     * not exist. The gateway must first accept the Merchant ID and signature;
-     * only then does it answer "not found". So anything but an authentication
-     * error means the credentials work.
-     *
-     * @return array { ok: bool, message: string }
-     */
-    public function probe(): array
-    {
-        if (!$this->config->isConfigured()) {
-            return ['ok' => false, 'message' => (string) __('Merchant ID or API key is empty.')];
-        }
-        list($ok, $data, $err) = $this->status('connection-check', 8);
-        $code = is_array($data) && isset($data['error']['code']) ? (string) $data['error']['code'] : '';
-        if ($ok) {
-            return ['ok' => true, 'message' => (string) __('Signed call accepted by the gateway.')];
-        }
-        if ($this->lastHttpCode === 0) {
-            return ['ok' => false, 'message' => (string) __('Could not reach %1: %2', $this->config->baseUrl(), $err)];
-        }
-        if (in_array($code, ['INVALID_SIGNATURE', 'MERCHANT_NOT_IDENTIFIED', 'INVALID_TIMESTAMP', 'TIMESTAMP_EXPIRED', 'UNAUTHORIZED'], true) || $this->lastHttpCode === 401) {
-            return ['ok' => false, 'message' => $err];
-        }
-        // 404 / 400 on a made-up id: authentication passed.
-        return ['ok' => true, 'message' => (string) __('Merchant ID and API key accepted (gateway answered HTTP %1 for a non-existent payment, as expected).', $this->lastHttpCode)];
-    }
-
-    /** What the store signs with, without revealing it: length and character class. */
+    /** What the store signs with, without revealing it: length and character class (debug log only). */
     public function keyFingerprint(): string
     {
         $k = $this->config->signatureKey();
