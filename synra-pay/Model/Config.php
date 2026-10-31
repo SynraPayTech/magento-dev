@@ -45,15 +45,25 @@ class Config
         return trim((string) $v);
     }
 
-    /** An encrypted (obscure) setting, decrypted. */
+    /**
+     * An encrypted (obscure) setting, in plain text.
+     *
+     * The key paths are declared with the Encrypted backend model in
+     * etc/config.xml, so Magento's config metadata processor already decrypts
+     * them when the scope config is read. Decrypting a second time turns the key
+     * into garbage, so only a value still in Magento's "<key#>:<cipher#>:<base64>"
+     * envelope (e.g. read through a path without that metadata) is decrypted here.
+     */
     public function secret(string $key, $storeId = null): string
     {
         $raw = $this->get($key, $storeId);
         if ($raw === '') {
             return '';
         }
-        $dec = $this->encryptor->decrypt($raw);
-        return trim((string) $dec);
+        if (preg_match('/^\d+:\d+:[A-Za-z0-9+\/=]+$/', $raw)) {
+            $raw = (string) $this->encryptor->decrypt($raw);
+        }
+        return trim($raw);
     }
 
     public function isActive($storeId = null): bool
