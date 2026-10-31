@@ -5,6 +5,7 @@ namespace Synra\Pay\Model\Api;
 
 use Magento\Framework\HTTP\Client\CurlFactory;
 use Synra\Pay\Model\Config;
+use Synra\Pay\Model\Log;
 
 /**
  * Signed server-to-server client for the SynraPay Direct API (signature v2):
@@ -36,13 +37,62 @@ class Client
     private $curlFactory;
     /** @var Config */
     private $config;
+    /** @var Log */
+    private $log;
     /** @var int last x-timestamp used by this process (ms) */
     private static $lastTs = 0;
+    /** @var int HTTP status of the last call (0 = transport failure) */
+    private $lastHttpCode = 0;
 
-    public function __construct(CurlFactory $curlFactory, Config $config)
+    public function __construct(CurlFactory $curlFactory, Config $config, Log $log)
     {
         $this->curlFactory = $curlFactory;
         $this->config      = $config;
+        $this->log         = $log;
+    }
+
+    public function lastHttpCode(): int
+    {
+        return $this->lastHttpCode;
+    }
+
+    /**
+     * Settings-page connection check: one signed GET on a payment id that does
+     * not exist. The gateway must first accept the Merchant ID and signature;
+     * only then does it answer "not found". So anything but an authentication
+     * error means the credentials work.
+     *
+     * @return array { ok: bool, message: string }
+     */
+    public function probe(): array
+    {
+        if (!$this->config->isConfigured()) {
+            return ['ok' => false, 'message' => (string) __('Merchant ID or API key is empty.')];
+        }
+        list($ok, $data, $err) = $this->status('connection-check', 8);
+        $code = is_array($data) && isset($data['error']['code']) ? (string) $data['error']['code'] : '';
+        if ($ok) {
+            return ['ok' => true, 'message' => (string) __('Signed call accepted by the gateway.')];
+        }
+        if ($this->lastHttpCode === 0) {
+            return ['ok' => false, 'message' => (string) __('Could not reach %1: %2', $this->config->baseUrl(), $err)];
+        }
+        if (in_array($code, ['INVALID_SIGNATURE', 'MERCHANT_NOT_IDENTIFIED', 'INVALID_TIMESTAMP', 'TIMESTAMP_EXPIRED', 'UNAUTHORIZED'], true) || $this->lastHttpCode === 401) {
+            return ['ok' => false, 'message' => $err];
+        }
+        // 404 / 400 on a made-up id: authentication passed.
+        return ['ok' => true, 'message' => (string) __('Merchant ID and API key accepted (gateway answered HTTP %1 for a non-existent payment, as expected).', $this->lastHttpCode)];
+    }
+
+    /** What the store signs with, without revealing it: length and character class. */
+    public function keyFingerprint(): string
+    {
+        $k = $this->config->signatureKey();
+        if ($k === '') {
+            return 'empty';
+        }
+        $class = ctype_xdigit($k) ? 'hex' : (ctype_alnum($k) ? 'alphanumeric' : (preg_match('/^[\x20-\x7E]+$/', $k) ? 'printable' : 'NON-PRINTABLE (decryption problem?)'));
+        return strlen($k) . ' chars, ' . $class;
     }
 
     /**
@@ -128,6 +178,13 @@ class Client
             'user-agent'          => 'SynraPay-Magento2/' . self::VERSION,
         ]);
 
+        // Debug trace of the signing inputs. The key itself is never written.
+        $this->log->info(sprintf(
+            'sign %s %s ts=%s body=%d bytes sha256=%s key=%s',
+            $method, $signedPath, $ts, strlen($body), substr(hash('sha256', $body), 0, 12), $this->keyFingerprint()
+        ));
+
+        $this->lastHttpCode = 0;
         try {
             if ($method === 'GET') {
                 $curl->get($url);
@@ -135,15 +192,20 @@ class Client
                 $curl->post($url, $body);
             }
         } catch (\Throwable $e) {
+            $this->log->error('transport ' . $method . ' ' . $signedPath . ': ' . $e->getMessage());
             return [false, null, $e->getMessage()];
         }
 
         $code = (int) $curl->getStatus();
-        $data = json_decode((string) $curl->getBody(), true);
+        $this->lastHttpCode = $code;
+        $raw  = (string) $curl->getBody();
+        $data = json_decode($raw, true);
 
         if ($code < 200 || $code >= 300 || !is_array($data)) {
+            $this->log->info(sprintf('%s %s → HTTP %d %s', $method, $signedPath, $code, mb_substr(preg_replace('/\s+/', ' ', $raw), 0, 300)));
             return [false, is_array($data) ? $data : null, self::errorText($data, $code)];
         }
+        $this->log->info(sprintf('%s %s → HTTP %d', $method, $signedPath, $code));
         return [true, $data, ''];
     }
 
