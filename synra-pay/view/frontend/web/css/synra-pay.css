@@ -8,6 +8,16 @@
 .synra-pay-hs-mount { margin: 8px 0 12px; min-height: 48px; max-width: 520px; }
 .synra-pay-hs-fields { width: 100%; min-width: 0; }
 .synra-pay-hs-fields iframe { max-width: 100%; }
+
+/* 3-D Secure check open: the SDK stretches its frame over the whole page with
+   position: fixed. An ancestor with transform/filter/overflow would trap or
+   clip it, so those are neutralised on our own wrappers while the box is open. */
+.synra-pay-challenge-open .synra-pay-hs-mount,
+.synra-pay-challenge-open .synra-pay-hs-fields,
+.synra-pay-challenge-open .synra-pay-method,
+.synra-pay-challenge-open .payment-method-content { transform: none !important; filter: none !important; overflow: visible !important; }
+.synra-pay-challenge-open .synra-pay-hs-fields iframe { max-width: none !important; }
+.synra-pay-challenge-open .loading-mask { display: none !important; }
 .synra-pay-hs-status { margin: 8px 0 0; font-size: 13px; line-height: 1.4; }
 .synra-pay-hs-status.is-muted { color: #6b7280; }
 .synra-pay-hs-status.is-error { color: #b91c1c; }
