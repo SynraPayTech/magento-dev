@@ -16,9 +16,10 @@ class Info extends PaymentInfo
         $info = $this->getInfo();
         $rows = [];
         $map  = [
-            OrderSettler::META_MERCHANT_ORDER => 'SynraPay order',
-            OrderSettler::META_DIRECT_ORDER   => 'Transaction',
-            OrderSettler::META_GATEWAY_REF    => 'Gateway reference',
+            OrderSettler::META_MERCHANT_ORDER => 'Merchant order ID',
+            OrderSettler::META_TRANSACTION    => 'Transaction ID',
+            OrderSettler::META_DIRECT_ORDER   => 'SynraPay order ID',
+            OrderSettler::META_AUTH_CODE      => 'Authorization code',
             OrderSettler::META_ENV            => 'Environment',
             OrderSettler::META_AWAITING       => 'Awaiting final confirmation since',
         ];

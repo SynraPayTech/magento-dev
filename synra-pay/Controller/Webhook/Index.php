@@ -9,6 +9,7 @@ use Magento\Framework\App\Request\InvalidRequestException;
 use Magento\Framework\App\Request\Http as HttpRequest;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\RawFactory;
+use Synra\Pay\Model\Api\Client;
 use Synra\Pay\Model\Config;
 use Synra\Pay\Model\Log;
 use Synra\Pay\Model\OrderFinder;
@@ -25,6 +26,9 @@ use Synra\Pay\Model\OrderSettler;
  *
  * Body: { mid, orderId (merchant_order_id), transactionId (Direct order id),
  *         amount, currency, status: success|failed|cancelled|expired, … }
+ *
+ * The body does not carry the dashboard's Transaction ID, so a paid delivery
+ * reads the order status once to pick it up first.
  */
 class Index implements HttpPostActionInterface, CsrfAwareActionInterface
 {
@@ -38,16 +42,19 @@ class Index implements HttpPostActionInterface, CsrfAwareActionInterface
     private $finder;
     /** @var OrderSettler */
     private $settler;
+    /** @var Client */
+    private $client;
     /** @var Log */
     private $log;
 
-    public function __construct(HttpRequest $request, RawFactory $rawFactory, Config $config, OrderFinder $finder, OrderSettler $settler, Log $log)
+    public function __construct(HttpRequest $request, RawFactory $rawFactory, Config $config, OrderFinder $finder, OrderSettler $settler, Client $client, Log $log)
     {
         $this->request    = $request;
         $this->rawFactory = $rawFactory;
         $this->config     = $config;
         $this->finder     = $finder;
         $this->settler    = $settler;
+        $this->client     = $client;
         $this->log        = $log;
     }
 
@@ -100,14 +107,12 @@ class Index implements HttpPostActionInterface, CsrfAwareActionInterface
         if (isset($body['currency'])) {
             $data['currency'] = $body['currency'];
         }
-        if (!empty($body['gatewayTransactionId'])) {
-            $data['gateway_transaction_id'] = (string) $body['gatewayTransactionId'];
-        } elseif (!empty($body['gateway_transaction_id'])) {
-            $data['gateway_transaction_id'] = (string) $body['gateway_transaction_id'];
-        }
 
         if (in_array($status, ['success', 'captured', 'paid', 'authorized'], true)) {
             $data['status'] = 'CAPTURED';
+            if (!$this->settler->isPaid($order)) {
+                $data = $this->withReferences($data);
+            }
             $this->settler->applyStatus($order, $data, 'webhook');
         } elseif (in_array($status, ['failed', 'cancelled', 'canceled', 'expired', 'declined'], true)) {
             $data['status'] = $status === 'canceled' ? 'CANCELLED' : strtoupper($status);
@@ -119,6 +124,34 @@ class Index implements HttpPostActionInterface, CsrfAwareActionInterface
             $this->log->info('webhook: ignored status ' . $status . ' for #' . $order->getIncrementId());
         }
         return $res->setHttpResponseCode(200)->setContents('ok');
+    }
+
+    /**
+     * Best effort: one status read for the references the webhook body lacks
+     * (synrapay_transaction_id, authorization_code). Only those
+     * are taken — the webhook still decides the outcome — and any failure
+     * leaves $data as it was, so settlement never waits on it.
+     */
+    private function withReferences(array $data): array
+    {
+        if (empty($data['order_id'])) {
+            return $data;
+        }
+        try {
+            list($ok, $status) = $this->client->status((string) $data['order_id'], 10);
+            if (!$ok || !is_array($status)) {
+                $this->log->info('webhook: status read for references failed on ' . $data['order_id'] . '; using the webhook ids');
+                return $data;
+            }
+            foreach (['synrapay_transaction_id', 'authorization_code'] as $k) {
+                if (!empty($status[$k]) && empty($data[$k])) {
+                    $data[$k] = (string) $status[$k];
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->log->warning('webhook: status read for references threw on ' . $data['order_id'] . ': ' . $e->getMessage());
+        }
+        return $data;
     }
 
     private function verify(string $raw): bool
