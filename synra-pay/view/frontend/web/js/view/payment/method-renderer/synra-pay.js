@@ -49,6 +49,11 @@ define([
             HS.on('busy', function (e) {
                 if (e.busy) { fullScreenLoader.startLoader(); } else { fullScreenLoader.stopLoader(); }
             });
+            // While the bank's 3-D Secure box is open the shopper must interact with it:
+            // drop Magento's loading mask, bring it back when the box closes.
+            HS.on('challenge', function (c) {
+                if (c.open) { fullScreenLoader.stopLoader(); } else if (HS.busy()) { fullScreenLoader.startLoader(); }
+            });
             HS.on('fail', function (e) {
                 fullScreenLoader.stopLoader();
                 self.isPlaceOrderActionAllowed(true);
@@ -91,6 +96,8 @@ define([
             var self = this;
             clearTimeout(this.syncTimer);
             this.syncTimer = setTimeout(function () {
+                // Never touch the card frame while a payment (or its 3-D Secure check) is running.
+                if (HS.busy()) { return; }
                 if (self.isChecked() !== self.getCode()) { return; }
                 var mount = document.querySelector('[data-synra-hs-mount]');
                 if (!mount) { return; }

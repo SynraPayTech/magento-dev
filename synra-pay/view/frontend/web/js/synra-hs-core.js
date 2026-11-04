@@ -117,6 +117,7 @@ define(['jquery', 'mage/cookies'], function ($) {
      */
     function sync(customer, opts) {
         opts = opts || {};
+        if (state.busy) { return Promise.resolve(state.session); }
         customer = customer || state.customer || {};
         state.customer = customer;
         var key = JSON.stringify([customer.email, customer.phone, customer.phone_country_code, customer.country, customer.first_name, customer.last_name, customer.total]);
@@ -187,6 +188,14 @@ define(['jquery', 'mage/cookies'], function ($) {
             f.on('ready', function () { skeleton(false); setStatus('', ''); emit('ready', sess); });
             f.on('change', function (s) { state.complete = !!(s && s.complete); emit('change', { complete: state.complete }); });
             f.on('enter', function () { emit('enter'); });
+            // The bank's 3-D Secure check: the SDK stretches this frame over the
+            // page. Make sure nothing of ours hides or clips it meanwhile.
+            f.on('challenge', function (c) {
+                var open = !!(c && c.open);
+                d.documentElement.classList.toggle('synra-pay-challenge-open', open);
+                if (open) { skeleton(false); if (host) { host.style.display = ''; } }
+                emit('challenge', { open: open });
+            });
             f.on('result', function (r) { if (state.resultWaiter) { var fn = state.resultWaiter; state.resultWaiter = null; fn(r || {}); } });
             f.on('error', function (e) {
                 if (e && e.code === 'HOSTED_FIELDS_SESSION_EXPIRED') {
