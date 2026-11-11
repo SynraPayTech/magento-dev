@@ -51,7 +51,10 @@ class Refund implements CommandInterface
             throw new LocalizedException(__('SynraPay refund failed: %1', $err));
         }
         $refundId = isset($data['refund_id']) ? (string) $data['refund_id'] : (isset($data['refundId']) ? (string) $data['refundId'] : 'ok');
-        $payment->setTransactionId($direct . '-refund-' . substr(md5((string) microtime(true)), 0, 8));
+        // Refunds call the API with the Direct API order id; the Magento
+        // transaction is labelled with the dashboard's Transaction ID.
+        $txnId = (string) $payment->getAdditionalInformation(OrderSettler::META_TRANSACTION);
+        $payment->setTransactionId(($txnId !== '' ? $txnId : $direct) . '-refund-' . substr(md5((string) microtime(true)), 0, 8));
         $payment->setIsTransactionClosed(true);
         $order->addCommentToStatusHistory(sprintf('SynraPay: refund of %s %s requested (%s).', $order->getOrderCurrencyCode(), number_format((float) $amount, 2), $refundId), false, false);
         return null;

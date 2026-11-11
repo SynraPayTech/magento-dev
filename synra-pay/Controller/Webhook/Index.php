@@ -9,6 +9,7 @@ use Magento\Framework\App\Request\InvalidRequestException;
 use Magento\Framework\App\Request\Http as HttpRequest;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\RawFactory;
+use Synra\Pay\Model\Api\Client;
 use Synra\Pay\Model\Config;
 use Synra\Pay\Model\Log;
 use Synra\Pay\Model\OrderFinder;
@@ -25,6 +26,9 @@ use Synra\Pay\Model\OrderSettler;
  *
  * Body: { mid, orderId (merchant_order_id), transactionId (Direct order id),
  *         amount, currency, status: success|failed|cancelled|expired, … }
+ *
+ * The body does not carry the dashboard's Transaction ID, so a paid delivery
+ * reads the order status once to pick it up first.
  */
 class Index implements HttpPostActionInterface, CsrfAwareActionInterface
 {
@@ -38,16 +42,19 @@ class Index implements HttpPostActionInterface, CsrfAwareActionInterface
     private $finder;
     /** @var OrderSettler */
     private $settler;
+    /** @var Client */
+    private $client;
     /** @var Log */
     private $log;
 
-    public function __construct(HttpRequest $request, RawFactory $rawFactory, Config $config, OrderFinder $finder, OrderSettler $settler, Log $log)
+    public function __construct(HttpRequest $request, RawFactory $rawFactory, Config $config, OrderFinder $finder, OrderSettler $settler, Client $client, Log $log)
     {
         $this->request    = $request;
         $this->rawFactory = $rawFactory;
         $this->config     = $config;
         $this->finder     = $finder;
         $this->settler    = $settler;
+        $this->client     = $client;
         $this->log        = $log;
     }
 
@@ -90,20 +97,19 @@ class Index implements HttpPostActionInterface, CsrfAwareActionInterface
             return $res->setHttpResponseCode(200)->setContents('ok');
         }
 
+        // The webhook's transactionId IS the dashboard Transaction ID (one transaction
+        // id, equal to the Direct API order_id): no status read is needed for it.
+        $directOrderId = $directOrderId !== '' ? $directOrderId : (string) $order->getPayment()->getAdditionalInformation(OrderSettler::META_DIRECT_ORDER);
         $data = [
-            'order_id' => $directOrderId !== '' ? $directOrderId : (string) $order->getPayment()->getAdditionalInformation(OrderSettler::META_DIRECT_ORDER),
-            'status'   => $status,
+            'order_id'       => $directOrderId,
+            'transaction_id' => $directOrderId,
+            'status'         => $status,
         ];
         if (isset($body['amount'])) {
             $data['amount'] = $body['amount'];
         }
         if (isset($body['currency'])) {
             $data['currency'] = $body['currency'];
-        }
-        if (!empty($body['gatewayTransactionId'])) {
-            $data['gateway_transaction_id'] = (string) $body['gatewayTransactionId'];
-        } elseif (!empty($body['gateway_transaction_id'])) {
-            $data['gateway_transaction_id'] = (string) $body['gateway_transaction_id'];
         }
 
         if (in_array($status, ['success', 'captured', 'paid', 'authorized'], true)) {

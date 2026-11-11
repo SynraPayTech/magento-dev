@@ -22,7 +22,8 @@ class OrderSettler
     const META_MERCHANT_ORDER = 'synra_merchant_order_id';
     const META_ENV            = 'synra_env';
     const META_AWAITING       = 'synra_awaiting_confirmation';
-    const META_GATEWAY_REF    = 'synra_gateway_reference';
+    const META_TRANSACTION    = 'synra_transaction_id';
+    const META_AUTH_CODE      = 'synra_authorization_code';
 
     /** @var InvoiceService */
     private $invoiceService;
@@ -66,6 +67,16 @@ class OrderSettler
     }
 
     /**
+     * The Transaction ID the merchant dashboard shows: transaction_id, which every
+     * Direct API answer carries and which always equals the Direct API order_id
+     * (one transaction id). Falls back to the order id when the answer lacks it.
+     */
+    public static function transactionIdOf(array $data, string $direct): string
+    {
+        return !empty($data['transaction_id']) ? (string) $data['transaction_id'] : $direct;
+    }
+
+    /**
      * The order is paid at SynraPay: record it once. $data is the Direct API
      * status answer (or the webhook body mapped to its keys).
      */
@@ -88,21 +99,31 @@ class OrderSettler
             return;
         }
 
-        $gatewayRef = !empty($data['gateway_transaction_id']) ? (string) $data['gateway_transaction_id'] : '';
+        // The Direct API order id stays in META_DIRECT_ORDER (status and refund
+        // calls key on it); what Magento shows as the transaction is the
+        // dashboard's Transaction ID, which is the same value.
+        $txnId      = self::transactionIdOf($data, $direct);
+        $authCode   = !empty($data['authorization_code']) ? (string) $data['authorization_code'] : '';
+        $merchantId = (string) $payment->getAdditionalInformation(self::META_MERCHANT_ORDER);
+        if ($merchantId === '' && !empty($data['merchant_order_id'])) {
+            $merchantId = (string) $data['merchant_order_id'];
+            $payment->setAdditionalInformation(self::META_MERCHANT_ORDER, $merchantId);
+        }
         $payment->setAdditionalInformation(self::META_DIRECT_ORDER, $direct);
-        if ($gatewayRef !== '') {
-            $payment->setAdditionalInformation(self::META_GATEWAY_REF, $gatewayRef);
+        $payment->setAdditionalInformation(self::META_TRANSACTION, $txnId);
+        if ($authCode !== '') {
+            $payment->setAdditionalInformation(self::META_AUTH_CODE, $authCode);
         }
         $payment->unsAdditionalInformation(self::META_AWAITING);
-        $payment->setTransactionId($direct);
-        $payment->setLastTransId($direct);
+        $payment->setTransactionId($txnId);
+        $payment->setLastTransId($txnId);
         $payment->setIsTransactionClosed(true);
         $payment->addTransaction(Transaction::TYPE_CAPTURE);
 
         if ($order->canInvoice()) {
             $invoice = $this->invoiceService->prepareInvoice($order);
             $invoice->setRequestedCaptureCase(Invoice::CAPTURE_OFFLINE);
-            $invoice->setTransactionId($direct);
+            $invoice->setTransactionId($txnId);
             $invoice->register();
             $invoice->getOrder()->setIsInProcess(true);
             $this->transactionFactory->create()->addObject($invoice)->addObject($invoice->getOrder())->save();
@@ -111,12 +132,13 @@ class OrderSettler
         $status = strtolower(isset($data['status']) ? (string) $data['status'] : 'captured');
         $order->setState(Order::STATE_PROCESSING)->setStatus($order->getConfig()->getStateDefaultStatus(Order::STATE_PROCESSING));
         $order->addCommentToStatusHistory(sprintf(
-            'SynraPay: payment %s (hosted session, via %s). Transaction %s%s',
-            $status, $source, $direct, $gatewayRef !== '' ? ', gateway ref ' . $gatewayRef : ''
+            'SynraPay: payment %s (hosted session, via %s). Merchant order ID %s, Transaction ID %s%s',
+            $status, $source, $merchantId !== '' ? $merchantId : '-', $txnId,
+            $authCode !== '' ? ', auth code ' . $authCode : ''
         ), false, false);
         $order->setCanSendNewEmailFlag(true);
         $this->orderRepository->save($order);
-        $this->log->info('order #' . $order->getIncrementId() . ' paid via ' . $source . ' (' . $direct . ')');
+        $this->log->info('order #' . $order->getIncrementId() . ' paid via ' . $source . ' (transaction ' . $txnId . ', order ' . $direct . ')');
 
         try {
             if (!$order->getEmailSent()) {

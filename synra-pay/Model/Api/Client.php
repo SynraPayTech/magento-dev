@@ -31,7 +31,7 @@ class Client
     const PATH_STATUS         = '/direct/payment/%s/status';
     const PATH_REFUND         = '/direct/refund';
 
-    const VERSION = '1.0.0';
+    const VERSION = '1.0.1';
 
     /** @var CurlFactory */
     private $curlFactory;
@@ -100,7 +100,8 @@ class Client
      * Step 3 — GET /v1/direct/payment/{order_id}/status. The ORDER decides;
      * nothing the browser says about the outcome is trusted.
      *
-     * @return array [ok, data, err]  data = { order_id, merchant_order_id, status, amount, currency, confirmation?, gateway_transaction_id, … }
+     * @return array [ok, data, err]  data = { order_id, merchant_order_id, transaction_id (= order_id), status, amount, currency,
+     *                                   confirmation?, gateway_transaction_id, authorization_code?, … }
      */
     public function status(string $orderId, int $timeout = 45): array
     {

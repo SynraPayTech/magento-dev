@@ -7,7 +7,7 @@ server.
 
 | | |
 |---|---|
-| 📦 Module | `Synra_Pay` v1.0.0 — folder [`synra-pay/`](./synra-pay) (= `app/code/Synra/Pay`) |
+| 📦 Module | `Synra_Pay` v1.0.2 — folder [`synra-pay/`](./synra-pay) (= `app/code/Synra/Pay`) |
 | 🛒 Magento | 2.4.0 or greater (Luma and Hyvä-compatible Knockout checkout) |
 | 🐘 PHP | 8.2 or greater |
 | 🔐 Integration | SynraPay Direct API — hosted session, signature v2 |
@@ -165,7 +165,7 @@ dist/                                    ready-to-install zip
 ### 🧑‍💻 Notes for developers
 
 - Rebuild the zip with `sh build-zip.sh` (uses `zip` or Windows `tar`; forward-slash entries).
-- Order data: `sales_order.ext_order_id` = SynraPay order id; payment `additional_information` carries `synra_merchant_order_id`, `synra_direct_order_id`, `synra_env`, `synra_gateway_reference`.
+- Order data: `sales_order.ext_order_id` = SynraPay order id; payment `additional_information` carries `synra_merchant_order_id`, `synra_direct_order_id`, `synra_transaction_id`, `synra_authorization_code`, `synra_env`.
 - Refund from a credit memo calls `POST /v1/direct/refund`, a **placeholder** route until the payment service publishes the final one.
 - Not included on purpose: hosted-checkout redirect mode, admin-placed orders (`can_use_internal` = 0), saved cards.
 
@@ -173,6 +173,8 @@ dist/                                    ready-to-install zip
 
 ## 📝 Changelog
 
+- **1.0.2** (2026-11-11) One transaction id. The Direct API order id is the Transaction ID the merchant dashboard shows, and every Direct API answer carries `transaction_id` equal to it. The Magento transaction / invoice id is `transaction_id` (falling back to `order_id`); `synrapay_transaction_id` is no longer read. Webhook settlement takes the Transaction ID from the webhook body's `transactionId` and no longer makes a status read for it. The admin payment block and the order comment show one Transaction ID line; the separate "SynraPay order ID" line is gone because it would repeat it (`synra_direct_order_id` is still stored for status reads and refunds).
+- **1.0.1** — The Magento transaction / invoice id is now the SynraPay merchant dashboard's Transaction ID (`synrapay_transaction_id`, falling back to the Direct API order id on older API answers); the Direct API order id is kept separately as "SynraPay order ID", and the authorization code is shown when present. The gateway reference is no longer stored or shown. Webhook settlement reads the order status once to pick up the Transaction ID.
 - **1.0.0** — First release: hosted-session card fields on the checkout page, webhook, cron re-check, admin settings.
 
 ## 🙋 Support
