@@ -2,7 +2,7 @@
     "name": "synrapay/module-magento2",
     "description": "SynraPay payment method for Magento 2 / Adobe Commerce: SynraPay's own card fields (Direct API hosted session) on the checkout page.",
     "type": "magento2-module",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "license": "proprietary",
     "require": {
         "php": ">=8.2.0",

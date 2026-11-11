@@ -100,7 +100,7 @@ class Client
      * Step 3 — GET /v1/direct/payment/{order_id}/status. The ORDER decides;
      * nothing the browser says about the outcome is trusted.
      *
-     * @return array [ok, data, err]  data = { order_id, merchant_order_id, synrapay_transaction_id?, status, amount, currency,
+     * @return array [ok, data, err]  data = { order_id, merchant_order_id, transaction_id (= order_id), status, amount, currency,
      *                                   confirmation?, gateway_transaction_id, authorization_code?, … }
      */
     public function status(string $orderId, int $timeout = 45): array

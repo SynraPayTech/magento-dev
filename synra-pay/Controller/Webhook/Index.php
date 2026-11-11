@@ -97,9 +97,13 @@ class Index implements HttpPostActionInterface, CsrfAwareActionInterface
             return $res->setHttpResponseCode(200)->setContents('ok');
         }
 
+        // The webhook's transactionId IS the dashboard Transaction ID (one transaction
+        // id, equal to the Direct API order_id): no status read is needed for it.
+        $directOrderId = $directOrderId !== '' ? $directOrderId : (string) $order->getPayment()->getAdditionalInformation(OrderSettler::META_DIRECT_ORDER);
         $data = [
-            'order_id' => $directOrderId !== '' ? $directOrderId : (string) $order->getPayment()->getAdditionalInformation(OrderSettler::META_DIRECT_ORDER),
-            'status'   => $status,
+            'order_id'       => $directOrderId,
+            'transaction_id' => $directOrderId,
+            'status'         => $status,
         ];
         if (isset($body['amount'])) {
             $data['amount'] = $body['amount'];
@@ -110,9 +114,6 @@ class Index implements HttpPostActionInterface, CsrfAwareActionInterface
 
         if (in_array($status, ['success', 'captured', 'paid', 'authorized'], true)) {
             $data['status'] = 'CAPTURED';
-            if (!$this->settler->isPaid($order)) {
-                $data = $this->withReferences($data);
-            }
             $this->settler->applyStatus($order, $data, 'webhook');
         } elseif (in_array($status, ['failed', 'cancelled', 'canceled', 'expired', 'declined'], true)) {
             $data['status'] = $status === 'canceled' ? 'CANCELLED' : strtoupper($status);
@@ -124,34 +125,6 @@ class Index implements HttpPostActionInterface, CsrfAwareActionInterface
             $this->log->info('webhook: ignored status ' . $status . ' for #' . $order->getIncrementId());
         }
         return $res->setHttpResponseCode(200)->setContents('ok');
-    }
-
-    /**
-     * Best effort: one status read for the references the webhook body lacks
-     * (synrapay_transaction_id, authorization_code). Only those
-     * are taken — the webhook still decides the outcome — and any failure
-     * leaves $data as it was, so settlement never waits on it.
-     */
-    private function withReferences(array $data): array
-    {
-        if (empty($data['order_id'])) {
-            return $data;
-        }
-        try {
-            list($ok, $status) = $this->client->status((string) $data['order_id'], 10);
-            if (!$ok || !is_array($status)) {
-                $this->log->info('webhook: status read for references failed on ' . $data['order_id'] . '; using the webhook ids');
-                return $data;
-            }
-            foreach (['synrapay_transaction_id', 'authorization_code'] as $k) {
-                if (!empty($status[$k]) && empty($data[$k])) {
-                    $data[$k] = (string) $status[$k];
-                }
-            }
-        } catch (\Throwable $e) {
-            $this->log->warning('webhook: status read for references threw on ' . $data['order_id'] . ': ' . $e->getMessage());
-        }
-        return $data;
     }
 
     private function verify(string $raw): bool

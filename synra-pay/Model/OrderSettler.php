@@ -67,12 +67,13 @@ class OrderSettler
     }
 
     /**
-     * The Transaction ID the merchant dashboard shows (synrapay_transaction_id),
-     * falling back to the Direct API order id when the answer lacks it.
+     * The Transaction ID the merchant dashboard shows: transaction_id, which every
+     * Direct API answer carries and which always equals the Direct API order_id
+     * (one transaction id). Falls back to the order id when the answer lacks it.
      */
     public static function transactionIdOf(array $data, string $direct): string
     {
-        return !empty($data['synrapay_transaction_id']) ? (string) $data['synrapay_transaction_id'] : $direct;
+        return !empty($data['transaction_id']) ? (string) $data['transaction_id'] : $direct;
     }
 
     /**
@@ -99,8 +100,8 @@ class OrderSettler
         }
 
         // The Direct API order id stays in META_DIRECT_ORDER (status and refund
-        // calls need it); what Magento shows as the transaction is the
-        // dashboard's Transaction ID.
+        // calls key on it); what Magento shows as the transaction is the
+        // dashboard's Transaction ID, which is the same value.
         $txnId      = self::transactionIdOf($data, $direct);
         $authCode   = !empty($data['authorization_code']) ? (string) $data['authorization_code'] : '';
         $merchantId = (string) $payment->getAdditionalInformation(self::META_MERCHANT_ORDER);
@@ -131,8 +132,8 @@ class OrderSettler
         $status = strtolower(isset($data['status']) ? (string) $data['status'] : 'captured');
         $order->setState(Order::STATE_PROCESSING)->setStatus($order->getConfig()->getStateDefaultStatus(Order::STATE_PROCESSING));
         $order->addCommentToStatusHistory(sprintf(
-            'SynraPay: payment %s (hosted session, via %s). Merchant order ID %s, Transaction ID %s, SynraPay order ID %s%s',
-            $status, $source, $merchantId !== '' ? $merchantId : '-', $txnId, $direct,
+            'SynraPay: payment %s (hosted session, via %s). Merchant order ID %s, Transaction ID %s%s',
+            $status, $source, $merchantId !== '' ? $merchantId : '-', $txnId,
             $authCode !== '' ? ', auth code ' . $authCode : ''
         ), false, false);
         $order->setCanSendNewEmailFlag(true);

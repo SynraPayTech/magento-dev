@@ -18,7 +18,6 @@ class Info extends PaymentInfo
         $map  = [
             OrderSettler::META_MERCHANT_ORDER => 'Merchant order ID',
             OrderSettler::META_TRANSACTION    => 'Transaction ID',
-            OrderSettler::META_DIRECT_ORDER   => 'SynraPay order ID',
             OrderSettler::META_AUTH_CODE      => 'Authorization code',
             OrderSettler::META_ENV            => 'Environment',
             OrderSettler::META_AWAITING       => 'Awaiting final confirmation since',
